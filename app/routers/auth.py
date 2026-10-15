@@ -8,6 +8,7 @@ from app.db import get_db
 from app.models.user import EmailToken, RefreshToken, User
 from app.schemas import auth as sch
 from app.services import mail
+from app.services.audit import audit
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -25,6 +26,9 @@ def login(body: sch.LoginIn, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == body.email.lower().strip()).first()
     if not user or not security.verify_password(body.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid email or password")
+    if not user.is_active:
+        raise HTTPException(status_code=401, detail="Account suspended")
+    audit(db, user, "auth.login", "user", user.id, {})
     return _auth_response(user, db)
 
 

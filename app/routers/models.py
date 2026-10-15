@@ -7,6 +7,7 @@ from app.models.model3d import Floor, Measurement, Model, ModelConflict, ModelEl
 from app.models.user import User
 from app.schemas import model3d as sch
 from app.services import clash
+from app.services.platform import upload_max_mb
 from app.storage.store import get_store, new_key
 
 router = APIRouter(tags=["models"])
@@ -36,8 +37,9 @@ async def upload_model(pid: str, file: UploadFile = File(...), name: str = Form(
                        user: User = Depends(deps.get_current_user), db: Session = Depends(get_db)):
     deps.require_project_member(db, pid, user)
     data = await file.read()
-    if len(data) > 500 * 1024 * 1024:
-        raise HTTPException(status_code=413, detail="File too large")
+    max_mb = upload_max_mb(db)
+    if len(data) > max_mb * 1024 * 1024:
+        raise HTTPException(status_code=413, detail=f"File too large (max {max_mb}MB)")
     ext = (file.filename or "").lower().rsplit(".", 1)[-1] if "." in (file.filename or "") else "glb"
     fmt = ext if ext in ("gltf", "glb", "ifc") else "glb"
     key = new_key(f"models/{pid}", file.filename or "model.glb")

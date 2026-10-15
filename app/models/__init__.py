@@ -14,3 +14,4 @@ from app.models.simulation import Simulation  # noqa: F401
 from app.models.report import Report, Document  # noqa: F401
 from app.models.collab import ActivityItem, Notification, NotificationPrefs  # noqa: F401
 from app.models.copilot import Conversation, Message, CopilotToolRating  # noqa: F401
+from app.models.admin import AuditLog, PlatformSetting  # noqa: F401

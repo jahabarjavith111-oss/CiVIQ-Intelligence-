@@ -8,6 +8,7 @@ from app.models.user import User
 from app.schemas import drawing as sch
 from app.services import drawings_ai
 from app.services.activity import log
+from app.services.platform import upload_max_mb
 from app.services.exports import build as build_export, filename
 from app.storage.store import get_store, new_key
 
@@ -42,8 +43,9 @@ async def upload_drawing(pid: str, file: UploadFile = File(...), type: str = For
                          db: Session = Depends(get_db)):
     deps.require_project_member(db, pid, user)
     data = await file.read()
-    if len(data) > 100 * 1024 * 1024:
-        raise HTTPException(status_code=413, detail="File too large (max 100MB)")
+    max_mb = upload_max_mb(db)
+    if len(data) > max_mb * 1024 * 1024:
+        raise HTTPException(status_code=413, detail=f"File too large (max {max_mb}MB)")
     store = get_store()
     key = new_key(f"drawings/{pid}", file.filename or "drawing.pdf")
     url = store.save(data, key, file.content_type or "application/pdf")

@@ -253,6 +253,22 @@ def notification_out(n) -> dict:
             "createdAt": iso(n.created_at)}
 
 
+def admin_user_out(u, project_count: int = 0) -> dict:
+    return {"id": u.id, "email": u.email, "name": u.name, "avatar": u.avatar,
+            "role": u.role, "isActive": bool(u.is_active), "projectCount": project_count,
+            "createdAt": iso(u.created_at), "updatedAt": iso(u.updated_at)}
+
+
+def audit_out(a) -> dict:
+    return {"id": a.id, "actorId": a.actor_id, "actorName": a.actor_name, "actorRole": a.actor_role,
+            "action": a.action, "entityType": a.entity_type, "entityId": a.entity_id,
+            "meta": a.meta or {}, "createdAt": iso(a.created_at)}
+
+
+def setting_out(key: str, value, updated_by=None, updated_at=None) -> dict:
+    return {"key": key, "value": value, "updatedBy": updated_by, "updatedAt": iso(updated_at)}
+
+
 def team_member_out(u, membership=None) -> dict:
     return {"id": u.id, "email": u.email, "name": u.name, "role": u.role,
             "projectRole": membership.role if membership else None,

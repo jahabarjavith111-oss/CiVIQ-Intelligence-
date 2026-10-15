@@ -155,6 +155,36 @@ def seed():
         ])
         db.commit()
         print("seed: demo workspace created (demo@civiq.ai / demo1234)")
+    ensure_single_admin()
+    finally:
+        db.close()
+
+
+def ensure_single_admin() -> None:
+    """Idempotent single-admin bootstrap: promotes ADMIN_EMAIL if no admin exists."""
+    import os
+
+    from app.models.admin import DEFAULT_SETTINGS, PlatformSetting
+
+    Session = get_session_local()
+    db = Session()
+    try:
+        if db.query(User).filter(User.role == "admin").first():
+            return
+        email = (os.getenv("ADMIN_EMAIL") or "").lower().strip()
+        target = db.query(User).filter(User.email == email).first() if email else None
+        if not target:
+            print("seed: no admin present — set ADMIN_EMAIL to bootstrap the single super admin")
+            return
+        target.role = "admin"
+        target.is_active = True
+        target.email_verified = True
+        db.commit()
+        for key, val in DEFAULT_SETTINGS.items():
+            if not db.get(PlatformSetting, key):
+                db.add(PlatformSetting(key=key, value=dict(val)))
+        db.commit()
+        print(f"seed: promoted {target.email} to super admin")
     finally:
         db.close()
 

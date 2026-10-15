@@ -5,8 +5,8 @@ import httpx
 from sqlalchemy.orm import Session
 
 from app import deps
-from app.config import settings
 from app.services import copilot_tools
+from app.services.platform import ai_config
 
 KEYWORDS: list[tuple[str, list[str]]] = [
     ("quantity_calculation", ["quantity", "how much concrete", "how much steel", "takeoff", "measure"]),
@@ -66,8 +66,9 @@ def _local_answer(intent: str, result: dict) -> str:
     return str(result)
 
 
-def llm_configured() -> bool:
-    return bool(settings.llm_base_url and settings.llm_api_key)
+def llm_configured(db=None) -> bool:
+    cfg = ai_config(db)
+    return bool(cfg["base_url"] and cfg["api_key"])
 
 
 def openai_tools_schema() -> list[dict]:
@@ -81,8 +82,9 @@ def openai_tools_schema() -> list[dict]:
 
 def llm_chat(db: Session, content: str, ctx: dict, history: list[dict]) -> tuple[str, str, list[dict]]:
     """Tool-calling loop against any OpenAI-compatible endpoint. Returns (answer, intent, evidence)."""
-    url = settings.llm_base_url.rstrip("/") + "/chat/completions"
-    headers = {"Authorization": f"Bearer {settings.llm_api_key}", "Content-Type": "application/json"}
+    cfg = ai_config(db)
+    url = (cfg["base_url"] or "").rstrip("/") + "/chat/completions"
+    headers = {"Authorization": f"Bearer {cfg['api_key']}", "Content-Type": "application/json"}
     messages = [{"role": "system", "content": (
         "You are CivIQ Copilot, a construction intelligence assistant. "
         "Use the provided tools to retrieve live project data before answering. "
@@ -96,7 +98,7 @@ def llm_chat(db: Session, content: str, ctx: dict, history: list[dict]) -> tuple
     with httpx.Client(timeout=60) as client:
         for _ in range(4):
             resp = client.post(url, headers=headers, json={
-                "model": settings.llm_model, "messages": messages,
+                "model": cfg["model"], "messages": messages,
                 "tools": openai_tools_schema(), "tool_choice": "auto",
             })
             resp.raise_for_status()
@@ -131,7 +133,7 @@ def answer(db: Session, content: str, ctx: dict | None, history: list[dict]) -> 
     """Main entry: LLM when configured, else local keyword + live-data answer."""
     ctx = ctx or {}
     intent, _ = detect_intent(content)
-    if llm_configured():
+    if llm_configured(db):
         try:
             return llm_chat(db, content, ctx, history)
         except Exception as exc:

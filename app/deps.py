@@ -46,6 +46,15 @@ def get_current_user(
     user = db.get(User, payload.get("sub"))
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
+    if not user.is_active:
+        raise HTTPException(status_code=401, detail="Account suspended")
+    return user
+
+
+def require_admin(user: User = Depends(get_current_user)) -> User:
+    """Super-admin guard: exactly-one platform admin, full access."""
+    if user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
     return user
 
 

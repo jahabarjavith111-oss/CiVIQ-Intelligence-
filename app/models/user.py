@@ -18,6 +18,7 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String(255))
     avatar: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     role: Mapped[str] = mapped_column(String(32), default="engineer")
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     company: Mapped[str | None] = mapped_column(String(255), nullable=True)
     email_verified: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
