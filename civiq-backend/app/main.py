@@ -10,7 +10,7 @@ from app.config import settings
 from app.db import Base, get_engine
 from app.realtime.manager import redis_listener
 from app.routers import (
-    activity, auth, boq, coordination, copilot, cost, drawings,
+    activity, admin, auth, boq, coordination, copilot, cost, drawings,
     models as models_router, notifications, projects, reports, revisions, risks, schedule,
     simulations, takeoff, team, ws,
 )
@@ -51,7 +51,7 @@ def healthz():
 
 _api = [
     auth, projects, team, activity, notifications, drawings, models_router, takeoff, boq,
-    cost, schedule, coordination, revisions, risks, simulations, reports, copilot,
+    cost, schedule, coordination, revisions, risks, simulations, reports, copilot, admin,
 ]
 for r in _api:
     app.include_router(r.router, prefix="/api")
