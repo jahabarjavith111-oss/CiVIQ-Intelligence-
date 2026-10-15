@@ -41,6 +41,11 @@ const MOCK_ANSWERS: Record<CopilotIntent, string> = {
   project_question: 'Project "Greenview Residency" is 42% complete, health 76/100 (cost 71, schedule 68, quality 84). Budget ₹4.50 Cr, spent ₹1.92 Cr, forecast ₹4.82 Cr. 23 open clashes, 5 high risks, next milestone Slab L5 on Oct 28.',
 };
 
+const _serverConvMap = new Map<string, string>();
+function useCopilotServerMap() {
+  return _serverConvMap;
+}
+
 export function useCopilot(conversationId?: string, projectId?: string) {
   const store = useCopilotStore();
   const toast = useUiStore((s) => s.pushToast);
@@ -56,14 +61,23 @@ export function useCopilot(conversationId?: string, projectId?: string) {
     },
   });
 
+  // Maps local conversation ids -> server conversation ids (backend mode).
+  const serverConv = useCopilotServerMap();
+
   const send = useMutation({
     mutationFn: async (content: string) => {
       const intent = detectLocalIntent(content);
-      const isLocal = !conversationId || conversationId.startsWith('local-');
-      // Server conversations go to the backend; local demo conversations answer offline.
-      if (!isLocal) {
+      const backendMode = import.meta.env.VITE_USE_MSW === 'false';
+      // Backend live: ensure a server conversation, send there, persist + compute for real.
+      if (backendMode) {
         try {
-          const res = await copilotApi.sendMessage(conversationId, content, projectId ? { projectId } : undefined);
+          const localId = conversationId ?? 'default';
+          let cid = serverConv.get(localId);
+          if (!cid) {
+            cid = (await copilotApi.createConversation(projectId)).data.id;
+            serverConv.set(localId, cid);
+          }
+          const res = await copilotApi.sendMessage(cid, content, projectId ? { projectId } : undefined);
           return { intent, answer: res.data.message.content, server: true as const };
         } catch { /* fall through to local answer */ }
       }
@@ -82,7 +96,7 @@ export function useCopilot(conversationId?: string, projectId?: string) {
       store.appendMessage(cid, {
         id: `m-${Date.now()}-a`, conversationId: cid, role: 'assistant', content: res.answer,
         intent: res.intent,
-        evidence: [{ id: `e-${Date.now()}`, type: 'document', sourceId: 'mock', sourceName: 'Mock project data (MSW)', excerpt: res.answer.slice(0, 160), relevance: 0.9 }],
+        evidence: [{ id: `e-${Date.now()}`, type: 'document', sourceId: res.server ? 'api' : 'mock', sourceName: res.server ? 'CivIQ backend (PostgreSQL)' : 'Mock project data (MSW)', excerpt: res.answer.slice(0, 160), relevance: 0.9 }],
         verification: 'verified', createdAt: now,
       });
     },
