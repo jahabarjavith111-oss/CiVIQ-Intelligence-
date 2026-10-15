@@ -13,6 +13,10 @@ class Settings(BaseSettings):
     access_token_minutes: int = 15
     refresh_token_days: int = 30
     frontend_url: str = "http://localhost:3000"
+    # Extra origins (comma-separated) plus a localhost regex so any local
+    # Vite port (3000, 5173, …) passes CORS preflight in dev.
+    cors_extra_origins: str = ""
+    cors_origin_regex: str = r"http://(localhost|127\.0\.0\.1)(:\d+)?"
     s3_endpoint_url: str = ""
     s3_bucket: str = "civiq-files"
     s3_access_key: str = ""
