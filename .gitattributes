@@ -1,0 +1,16 @@
+# Normalize line endings: LF in repo and worktree on every OS.
+# Ends the CRLF-vs-LF modified-file noise on Windows checkouts.
+* text=auto eol=lf
+
+# Binary assets must never be normalized.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.glb binary
+*.gltf binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
