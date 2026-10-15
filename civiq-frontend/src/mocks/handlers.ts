@@ -349,6 +349,92 @@ export const handlers = [
       message: { id: `m-${Date.now()}`, role: 'assistant', content: `Server echo (wire streaming here): ${body.content}`, evidence: [], verification: 'verified', createdAt: new Date().toISOString() },
     });
   }),
+
+  // ---- super-admin platform (mock) ----
+  http.get('/api/admin/overview', () => HttpResponse.json({
+    users: { total: 5, byRole: [{ key: 'admin', count: 1 }, { key: 'project-manager', count: 1 }, { key: 'engineer', count: 3 }], suspended: 0 },
+    projects: { total: 1, byStatus: [{ key: 'active', count: 1 }] },
+    drawings: { total: 2, analysesByStatus: [{ key: 'completed', count: 2 }] },
+    copilot: { conversations: 2, messages24h: 6 }, activity24h: 4,
+  })),
+  http.get('/api/admin/users', () => HttpResponse.json({ data: adminUsersDb, total: adminUsersDb.length, page: 1, limit: 20 })),
+  http.patch('/api/admin/users/:id', async ({ params, request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    const u = adminUsersDb.find((x) => x.id === params.id);
+    if (!u) return HttpResponse.json({ detail: 'User not found' }, { status: 404 });
+    if (body.role === 'admin' && adminUsersDb.some((x) => x.role === 'admin' && x.id !== u.id)) {
+      return HttpResponse.json({ detail: 'Only one super admin is allowed' }, { status: 400 });
+    }
+    Object.assign(u, body, { updatedAt: new Date().toISOString() });
+    return HttpResponse.json(u);
+  }),
+  http.post('/api/admin/users/:id/suspend', ({ params }) => {
+    const u = adminUsersDb.find((x) => x.id === params.id);
+    if (!u) return HttpResponse.json({ detail: 'User not found' }, { status: 404 });
+    u.isActive = false;
+    return HttpResponse.json(u);
+  }),
+  http.post('/api/admin/users/:id/activate', ({ params }) => {
+    const u = adminUsersDb.find((x) => x.id === params.id);
+    if (!u) return HttpResponse.json({ detail: 'User not found' }, { status: 404 });
+    u.isActive = true;
+    return HttpResponse.json(u);
+  }),
+  http.get('/api/admin/projects', () => HttpResponse.json({ data: [{
+    id: 'proj-greenview-01', name: 'Greenview Residency — Tower B', status: 'active',
+    budget: 45000000, currency: 'INR', spent: 19200000, members: 8, drawings: 2,
+    openConflicts: 23, openRisks: 5, ownerId: 'u-1', startDate: '2026-01-15', endDate: '2027-06-30',
+  }], total: 1, page: 1, limit: 20 })),
+  http.post('/api/admin/projects/:id/archive', ({ params }) => HttpResponse.json({ id: params.id, status: 'archived' })),
+  http.get('/api/admin/ai/analyses', () => HttpResponse.json({ data: [{
+    id: 'an-1', drawingId: 'dwg-a101', drawingName: 'A-101 Ground Floor Plan', projectId: 'proj-greenview-01',
+    status: 'completed', confidence: 0.94, processedAt: new Date().toISOString(), error: null,
+  }], total: 1, page: 1, limit: 20 })),
+  http.get('/api/admin/ai/usage', () => HttpResponse.json({
+    conversations: 2, assistantMessages: 5, failedVerifications: 0, negativeRatings: 0,
+    byDay: [{ date: '2026-10-14', count: 3 }, { date: '2026-10-15', count: 2 }],
+    byIntent: [{ intent: 'quantity_calculation', count: 2 }, { intent: 'cost_analysis', count: 2 }, { intent: 'project_question', count: 1 }],
+  })),
+  http.get('/api/admin/health', () => HttpResponse.json({
+    app: 'CivIQ API', env: 'dev', version: '0.1.0',
+    database: { ok: true, latencyMs: 1.2, error: null },
+    storage: { bytes: 48200000, dir: './data/files' },
+    redis: { ok: false, queueDepth: null },
+    ai: { provider: 'local', model: 'keyword-responder' },
+  })),
+  http.get('/api/admin/settings', () => HttpResponse.json(adminSettingsDb)),
+  http.put('/api/admin/settings', async ({ request }) => {
+    const body = (await request.json()) as { key: string; value: { value: unknown } };
+    const s = adminSettingsDb.find((x) => x.key === body.key);
+    if (!s) return HttpResponse.json({ detail: 'Unknown setting key' }, { status: 400 });
+    if (body.key === 'upload.max_mb') {
+      const v = Number((body.value as { value: unknown }).value);
+      if (!Number.isFinite(v) || v < 1 || v > 1024) return HttpResponse.json({ detail: 'upload.max_mb must be 1..1024' }, { status: 400 });
+    }
+    s.value = body.value;
+    return HttpResponse.json(s);
+  }),
+  http.get('/api/admin/audit', () => HttpResponse.json({ data: [{
+    id: 'al-1', actorId: 'u-1', actorName: 'Demo Engineer', actorRole: 'admin', action: 'auth.login',
+    entityType: 'user', entityId: 'u-1', meta: {}, createdAt: new Date().toISOString(),
+  }], total: 1, page: 1, limit: 20 })),
+  http.get('/api/admin/billing', () => HttpResponse.json({ enabled: false, message: 'Subscription management is not enabled on this platform.' })),
+];
+
+const adminUsersDb: { id: string; email: string; name: string; role: string; isActive: boolean; projectCount: number; createdAt: string; updatedAt: string }[] = [
+  { id: 'u-0', email: 'admin@civiq.ai', name: 'Platform Admin', role: 'admin', isActive: true, projectCount: 1, createdAt: '', updatedAt: '' },
+  { id: 'u-1', email: 'demo@civiq.ai', name: 'Demo Engineer', role: 'project-manager', isActive: true, projectCount: 1, createdAt: '', updatedAt: '' },
+  { id: 'u-2', email: 'ananya@acme.com', name: 'Ananya Rao', role: 'engineer', isActive: true, projectCount: 1, createdAt: '', updatedAt: '' },
+  { id: 'u-3', email: 'ravi@acme.com', name: 'Ravi Kumar', role: 'engineer', isActive: true, projectCount: 0, createdAt: '', updatedAt: '' },
+];
+
+const adminSettingsDb: { key: string; value: { value: unknown }; updatedBy: string | null; updatedAt: string | null }[] = [
+  { key: 'upload.max_mb', value: { value: 100 }, updatedBy: null, updatedAt: null },
+  { key: 'ai.provider', value: { value: 'local' }, updatedBy: null, updatedAt: null },
+  { key: 'ai.model', value: { value: 'keyword-responder' }, updatedBy: null, updatedAt: null },
+  { key: 'ai.base_url', value: { value: '' }, updatedBy: null, updatedAt: null },
+  { key: 'ai.api_key', value: { value: '' }, updatedBy: null, updatedAt: null },
+  { key: 'announcement', value: { value: '' }, updatedBy: null, updatedAt: null },
 ];
 
 const teamDb: { id: string; email: string; name: string; role: string; projectRole: string; lastActive: string; createdAt: string; updatedAt: string }[] = [

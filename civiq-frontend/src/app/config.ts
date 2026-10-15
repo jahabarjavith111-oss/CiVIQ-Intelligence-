@@ -35,32 +35,62 @@ export const ROUTES = {
   NOTIFICATIONS: '/notifications',
   ONBOARDING: '/onboarding',
   SETTINGS: '/settings',
+  ADMIN: '/admin',
+  ADMIN_USERS: '/admin/users',
+  ADMIN_PROJECTS: '/admin/projects',
+  ADMIN_AI: '/admin/ai',
+  ADMIN_HEALTH: '/admin/health',
+  ADMIN_AUDIT: '/admin/audit',
+  ADMIN_SETTINGS: '/admin/settings',
+  ADMIN_BILLING: '/admin/billing',
   NOT_FOUND: '/404',
   SERVER_ERROR: '/500',
   MAINTENANCE: '/maintenance',
 } as const;
 
-export const MODULES = [
-  { key: 'dashboard', label: 'Command Center', icon: 'layout-dashboard', route: ROUTES.DASHBOARD },
-  { key: 'projects', label: 'Projects', icon: 'folder-kanban', route: ROUTES.PROJECTS },
-  { key: 'drawings', label: 'Drawing Intelligence', icon: 'file-image', route: ROUTES.DRAWINGS },
-  { key: 'model-3d', label: '3D Model', icon: 'cube', route: ROUTES.MODEL_3D },
-  { key: 'copilot', label: 'Copilot', icon: 'bot', route: ROUTES.COPILOT },
-  { key: 'takeoff', label: 'Takeoff', icon: 'ruler', route: ROUTES.TAKEOFF },
-  { key: 'boq', label: 'BOQ', icon: 'list-tree', route: ROUTES.BOQ },
-  { key: 'cost', label: 'Cost Intelligence', icon: 'dollar-sign', route: ROUTES.COST },
-  { key: 'schedule', label: 'Schedule', icon: 'calendar', route: ROUTES.SCHEDULE },
-  { key: 'coordination', label: 'Coordination', icon: 'git-merge', route: ROUTES.COORDINATION },
-  { key: 'revisions', label: 'Revisions', icon: 'git-compare', route: ROUTES.REVISIONS },
-  { key: 'risks', label: 'Risk Intelligence', icon: 'alert-triangle', route: ROUTES.RISKS },
-  { key: 'simulation', label: 'Simulation', icon: 'flask-conical', route: ROUTES.SIMULATION },
-  { key: 'analytics', label: 'Analytics', icon: 'bar-chart-3', route: ROUTES.ANALYTICS },
-  { key: 'documents', label: 'Documents', icon: 'file-text', route: ROUTES.DOCUMENTS },
-  { key: 'reports', label: 'Reports', icon: 'file-output', route: ROUTES.REPORTS },
-  { key: 'activity', label: 'Activity', icon: 'activity', route: ROUTES.ACTIVITY },
-  { key: 'team', label: 'Team', icon: 'users', route: ROUTES.TEAM },
-  { key: 'notifications', label: 'Notifications', icon: 'bell', route: ROUTES.NOTIFICATIONS },
-] as const;
+export interface ModuleDef {
+  key: string;
+  label: string;
+  icon: string;
+  route: string;
+  /** Required `resource:action` permission; null = any authenticated user. */
+  perm: string | null;
+}
+
+/** Sidebar modules; filtered per role by ROLE_PERMISSIONS (src/types/auth.ts). */
+export const MODULES: ModuleDef[] = [
+  { key: 'dashboard', label: 'Command Center', icon: 'layout-dashboard', route: ROUTES.DASHBOARD, perm: null },
+  { key: 'projects', label: 'Projects', icon: 'folder-kanban', route: ROUTES.PROJECTS, perm: 'projects:read' },
+  { key: 'drawings', label: 'Drawing Intelligence', icon: 'file-image', route: ROUTES.DRAWINGS, perm: 'drawings:read' },
+  { key: 'model-3d', label: '3D Model', icon: 'cube', route: ROUTES.MODEL_3D, perm: 'model-3d:read' },
+  { key: 'copilot', label: 'Copilot', icon: 'bot', route: ROUTES.COPILOT, perm: 'copilot:read' },
+  { key: 'takeoff', label: 'Takeoff', icon: 'ruler', route: ROUTES.TAKEOFF, perm: 'takeoff:read' },
+  { key: 'boq', label: 'BOQ', icon: 'list-tree', route: ROUTES.BOQ, perm: 'boq:read' },
+  { key: 'cost', label: 'Cost Intelligence', icon: 'dollar-sign', route: ROUTES.COST, perm: 'cost:read' },
+  { key: 'schedule', label: 'Schedule', icon: 'calendar', route: ROUTES.SCHEDULE, perm: 'schedule:read' },
+  { key: 'coordination', label: 'Coordination', icon: 'git-merge', route: ROUTES.COORDINATION, perm: 'coordination:read' },
+  { key: 'revisions', label: 'Revisions', icon: 'git-compare', route: ROUTES.REVISIONS, perm: 'revisions:read' },
+  { key: 'risks', label: 'Risk Intelligence', icon: 'alert-triangle', route: ROUTES.RISKS, perm: 'risks:read' },
+  { key: 'simulation', label: 'Simulation', icon: 'flask-conical', route: ROUTES.SIMULATION, perm: 'simulation:read' },
+  { key: 'analytics', label: 'Analytics', icon: 'bar-chart-3', route: ROUTES.ANALYTICS, perm: 'analytics:read' },
+  { key: 'documents', label: 'Documents', icon: 'file-text', route: ROUTES.DOCUMENTS, perm: 'documents:read' },
+  { key: 'reports', label: 'Reports', icon: 'file-output', route: ROUTES.REPORTS, perm: 'reports:read' },
+  { key: 'activity', label: 'Activity', icon: 'activity', route: ROUTES.ACTIVITY, perm: null },
+  { key: 'team', label: 'Team', icon: 'users', route: ROUTES.TEAM, perm: null },
+  { key: 'notifications', label: 'Notifications', icon: 'bell', route: ROUTES.NOTIFICATIONS, perm: null },
+];
+
+/** Super-admin-only section. Rendered iff user.role === 'admin'. */
+export const ADMIN_MODULES: ModuleDef[] = [
+  { key: 'admin-overview', label: 'Platform Overview', icon: 'shield', route: ROUTES.ADMIN, perm: null },
+  { key: 'admin-users', label: 'Users', icon: 'users', route: ROUTES.ADMIN_USERS, perm: null },
+  { key: 'admin-projects', label: 'All Projects', icon: 'folder-kanban', route: ROUTES.ADMIN_PROJECTS, perm: null },
+  { key: 'admin-ai', label: 'AI Monitoring', icon: 'bot', route: ROUTES.ADMIN_AI, perm: null },
+  { key: 'admin-health', label: 'System Health', icon: 'activity', route: ROUTES.ADMIN_HEALTH, perm: null },
+  { key: 'admin-audit', label: 'Audit Logs', icon: 'file-text', route: ROUTES.ADMIN_AUDIT, perm: null },
+  { key: 'admin-settings', label: 'Platform Settings', icon: 'settings', route: ROUTES.ADMIN_SETTINGS, perm: null },
+  { key: 'admin-billing', label: 'Subscriptions', icon: 'dollar-sign', route: ROUTES.ADMIN_BILLING, perm: null },
+];
 
 export const PROJECT_STATUSES = ['planning', 'active', 'on-hold', 'completed', 'archived'] as const;
 export const DRAWING_TYPES = ['architectural', 'structural', 'mep', 'electrical', 'plumbing', 'civil'] as const;

@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { ROUTES } from './config';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { ProtectedRoute } from '@/components/common/ProtectedRoute';
+import { RequireAdmin } from '@/components/common/RequireAdmin';
 import { PageLoader } from '@/components/common/PageLoader';
 
 const Dashboard = lazy(() => import('@/features/command-center/pages/Dashboard'));
@@ -35,6 +36,14 @@ const ForgotPassword = lazy(() => import('@/pages/auth/ForgotPassword'));
 const ResetPassword = lazy(() => import('@/pages/auth/ResetPassword'));
 const VerifyEmail = lazy(() => import('@/pages/auth/VerifyEmail'));
 const Landing = lazy(() => import('@/pages/marketing/Landing'));
+const AdminOverview = lazy(() => import('@/features/admin/pages/AdminOverview'));
+const AdminUsers = lazy(() => import('@/features/admin/pages/AdminUsers'));
+const AdminProjects = lazy(() => import('@/features/admin/pages/AdminProjects'));
+const AdminAi = lazy(() => import('@/features/admin/pages/AdminAi'));
+const AdminHealth = lazy(() => import('@/features/admin/pages/AdminHealth'));
+const AdminAudit = lazy(() => import('@/features/admin/pages/AdminAudit'));
+const AdminSettings = lazy(() => import('@/features/admin/pages/AdminSettings'));
+const AdminBilling = lazy(() => import('@/features/admin/pages/AdminBilling'));
 const NotFound = lazy(() => import('@/pages/errors/NotFound'));
 const ServerError = lazy(() => import('@/pages/errors/ServerError'));
 const Maintenance = lazy(() => import('@/pages/errors/Maintenance'));
@@ -82,6 +91,16 @@ export function AppRoutes() {
           <Route path={ROUTES.NOTIFICATIONS} element={<Sus><NotificationsPage /></Sus>} />
           <Route path={ROUTES.SETTINGS} element={<Sus><SettingsPage /></Sus>} />
           <Route path={ROUTES.ONBOARDING} element={<Sus><Onboarding /></Sus>} />
+          <Route element={<RequireAdmin />}>
+            <Route path={ROUTES.ADMIN} element={<Sus><AdminOverview /></Sus>} />
+            <Route path={ROUTES.ADMIN_USERS} element={<Sus><AdminUsers /></Sus>} />
+            <Route path={ROUTES.ADMIN_PROJECTS} element={<Sus><AdminProjects /></Sus>} />
+            <Route path={ROUTES.ADMIN_AI} element={<Sus><AdminAi /></Sus>} />
+            <Route path={ROUTES.ADMIN_HEALTH} element={<Sus><AdminHealth /></Sus>} />
+            <Route path={ROUTES.ADMIN_AUDIT} element={<Sus><AdminAudit /></Sus>} />
+            <Route path={ROUTES.ADMIN_SETTINGS} element={<Sus><AdminSettings /></Sus>} />
+            <Route path={ROUTES.ADMIN_BILLING} element={<Sus><AdminBilling /></Sus>} />
+          </Route>
         </Route>
       </Route>
       <Route path="/404" element={<Sus><NotFound /></Sus>} />

@@ -1,7 +1,9 @@
 import { NavLink, useParams } from 'react-router-dom';
-import { LayoutDashboard, FolderKanban, FileImage, Box, Bot, Ruler, ListTree, IndianRupee, CalendarDays, GitMerge, GitCompareArrows, TriangleAlert, FlaskConical, BarChart3, Files, FileOutput, Activity, Users, Bell, ChevronLeft } from 'lucide-react';
-import { MODULES } from '@/app/config';
+import { LayoutDashboard, FolderKanban, FileImage, Box, Bot, Ruler, ListTree, IndianRupee, CalendarDays, GitMerge, GitCompareArrows, TriangleAlert, FlaskConical, BarChart3, Files, FileOutput, Activity, Users, Bell, Shield, Settings, ChevronLeft } from 'lucide-react';
+import { MODULES, ADMIN_MODULES, type ModuleDef } from '@/app/config';
 import { useWorkspaceStore } from '@/store/workspaceStore';
+import { useAuthStore } from '@/store/authStore';
+import { canAccess, isAdmin } from '@/utils/permissions';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/common/Logo';
 
@@ -12,13 +14,34 @@ const ICONS: Record<string, unknown> = {
   'alert-triangle': TriangleAlert, 'flask-conical': FlaskConical, 'bar-chart-3': BarChart3,
   'file-text': Files, 'file-output': FileOutput,
   activity: Activity, users: Users, bell: Bell,
+  shield: Shield, settings: Settings,
 };
+
+function NavItems({ items, collapsed, routeFor }: { items: ModuleDef[]; collapsed: boolean; routeFor: (r: string) => string }) {
+  return (
+    <>
+      {items.map((m) => {
+        const Icon = ICONS[m.icon] as React.ComponentType<{ className?: string }>;
+        return (
+          <NavLink key={m.key} to={routeFor(m.route)}
+            className={({ isActive }) => cn('flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium', isActive ? 'bg-inverse text-on-inverse' : 'text-text-secondary hover:bg-surface-3')}>
+            {Icon && <Icon className="h-4 w-4 shrink-0" />}
+            {!collapsed && <span className="truncate">{m.label}</span>}
+          </NavLink>
+        );
+      })}
+    </>
+  );
+}
 
 export function Sidebar() {
   const { projectId } = useParams();
   const collapsed = useWorkspaceStore((s) => s.sidebarCollapsed);
   const toggle = useWorkspaceStore((s) => s.toggleSidebar);
   const activeProject = useWorkspaceStore((s) => s.activeProjectId) ?? projectId;
+  const role = useAuthStore((s) => s.user?.role);
+  const admin = isAdmin(role);
+  const visibleModules = MODULES.filter((m) => canAccess(role, m.perm));
 
   const routeFor = (route: string) => {
     if (!activeProject) return route;
@@ -35,16 +58,13 @@ export function Sidebar() {
         <button aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} onClick={toggle} className="ml-auto rounded p-1 text-text-muted hover:bg-surface-3"><ChevronLeft className={cn('h-4 w-4 transition', collapsed && 'rotate-180')} /></button>
       </div>
       <nav className="flex-1 space-y-1 overflow-y-auto p-2">
-        {MODULES.map((m) => {
-          const Icon = ICONS[m.icon] as React.ComponentType<{ className?: string }>;
-          return (
-            <NavLink key={m.key} to={routeFor(m.route)}
-              className={({ isActive }) => cn('flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium', isActive ? 'bg-inverse text-on-inverse' : 'text-text-secondary hover:bg-surface-3')}>
-              {Icon && <Icon className="h-4 w-4 shrink-0" />}
-              {!collapsed && <span className="truncate">{m.label}</span>}
-            </NavLink>
-          );
-        })}
+        <NavItems items={visibleModules} collapsed={collapsed} routeFor={routeFor} />
+        {admin && (
+          <>
+            {!collapsed && <p className="px-3 pb-1 pt-3 text-[10px] font-bold uppercase tracking-widest text-text-muted">Administration</p>}
+            <NavItems items={ADMIN_MODULES} collapsed={collapsed} routeFor={routeFor} />
+          </>
+        )}
       </nav>
       {!collapsed && <div className="border-t border-border p-3 text-[11px] text-text-muted">CivIQ v0.1 • 10-day MVP</div>}
     </aside>
