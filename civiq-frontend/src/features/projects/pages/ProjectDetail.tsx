@@ -13,7 +13,7 @@ export default function ProjectDetail() {
   const { detailQuery } = useProject(id);
   const [tab, setTab] = useState('overview');
   if (detailQuery.isLoading) return <PageLoader />;
-  if (detailQuery.isError) return <QueryErrorState title="Could not load project" onRetry={() => detailQuery.refetch()} />;
+  if (detailQuery.isError) return <QueryErrorState title="Could not load project" error={detailQuery.error} onRetry={() => detailQuery.refetch()} />;
   const p = detailQuery.data;
 
   return (

@@ -1,7 +1,7 @@
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { costApi } from '@/services/cost.api';
 import { useWorkspaceStore } from '@/store/workspaceStore';
-import { DEMO_PROJECT_ID } from '@/utils/constants';
+import { NoProjectSelected } from '@/components/common/RequireProject';
 import { useUiStore } from '@/store/uiStore';
 import { StatCard } from '@/components/common/StatCard';
 import { Card, CardTitle } from '@/components/ui/Card';
@@ -15,20 +15,21 @@ import { PageLoader } from '@/components/common/PageLoader';
 import { QueryErrorState } from '@/components/common/QueryErrorState';
 
 export default function CostPage() {
-  const projectId = useWorkspaceStore((s) => s.activeProjectId) ?? DEMO_PROJECT_ID;
+  const projectId = useWorkspaceStore((s) => s.activeProjectId);
   const toast = useUiStore((s) => s.pushToast);
   const colors = useChartColors();
-  const q = useQuery({ queryKey: ['budget', projectId], queryFn: async () => (await costApi.getBudgetSummary(projectId)).data });
+  const q = useQuery({ queryKey: ['budget', projectId], queryFn: async () => (await costApi.getBudgetSummary(projectId!)).data, enabled: !!projectId });
   const forecast = useMutation({
     mutationFn: async () => {
-      const sc = (await costApi.createForecastScenario(projectId, { name: `Steel +10% — ${Date.now()}`, description: 'quick scenario', isBaseline: false, assumptions: [{ category: 'material', factor: 1.1, reason: 'steel surge' }] })).data;
+      const sc = (await costApi.createForecastScenario(projectId!, { name: `Steel +10% — ${Date.now()}`, description: 'quick scenario', isBaseline: false, assumptions: [{ category: 'material', factor: 1.1, reason: 'steel surge' }] })).data;
       return (await costApi.runForecast(sc.id)).data;
     },
     onSuccess: () => toast({ title: 'Forecast complete', variant: 'success' }),
     onError: () => toast({ title: 'Forecast run failed', variant: 'error' }),
   });
+  if (!projectId) return <NoProjectSelected />;
   if (q.isLoading) return <PageLoader />;
-  if (q.isError || !q.data) return <QueryErrorState title="Could not load cost data" onRetry={() => q.refetch()} />;
+  if (q.isError || !q.data) return <QueryErrorState title="Could not load cost data" error={q.error} onRetry={() => q.refetch()} />;
   const b = q.data;
   const tick = { fill: colors.slate, fontSize: 11 };
   const tipStyle = { contentStyle: { backgroundColor: colors.tooltipBg, borderColor: colors.tooltipBorder, color: colors.ink, borderRadius: 8, fontSize: 12 } };

@@ -6,7 +6,7 @@ import { takeoffApi } from '@/services/takeoff.api';
 import { boqApi } from '@/services/boq.api';
 import { risksApi } from '@/services/risks.api';
 import { useWorkspaceStore } from '@/store/workspaceStore';
-import { DEMO_PROJECT_ID } from '@/utils/constants';
+import { NoProjectSelected } from '@/components/common/RequireProject';
 import { Card, CardTitle } from '@/components/ui/Card';
 import { Tabs } from '@/components/ui/Tabs';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, BarChart, Bar, Legend } from 'recharts';
@@ -35,49 +35,49 @@ interface TabData {
 }
 
 export default function AnalyticsPage() {
-  const projectId = useWorkspaceStore((s) => s.activeProjectId) ?? DEMO_PROJECT_ID;
+  const projectId = useWorkspaceStore((s) => s.activeProjectId);
   const [tab, setTab] = useState('cost');
   const colors = useChartColors();
 
   const sCurve = useQuery({
     queryKey: ['analytics', projectId, 's-curve'],
-    queryFn: async () => (await costApi.getSCurve(projectId)).data,
-    enabled: tab === 'cost',
+    queryFn: async () => (await costApi.getSCurve(projectId!)).data,
+    enabled: tab === 'cost' && !!projectId,
   });
   const breakdown = useQuery({
     queryKey: ['analytics', projectId, 'breakdown'],
-    queryFn: async () => (await costApi.getBreakdown(projectId)).data,
-    enabled: tab === 'cost',
+    queryFn: async () => (await costApi.getBreakdown(projectId!)).data,
+    enabled: tab === 'cost' && !!projectId,
   });
   const activities = useQuery({
     queryKey: ['analytics', projectId, 'activities'],
-    queryFn: async () => (await scheduleApi.getActivities(projectId)).data.data,
-    enabled: tab === 'schedule',
+    queryFn: async () => (await scheduleApi.getActivities(projectId!)).data.data,
+    enabled: tab === 'schedule' && !!projectId,
   });
   const schedSummary = useQuery({
     queryKey: ['analytics', projectId, 'sched-summary'],
-    queryFn: async () => (await scheduleApi.getSummary(projectId)).data,
-    enabled: tab === 'schedule',
+    queryFn: async () => (await scheduleApi.getSummary(projectId!)).data,
+    enabled: tab === 'schedule' && !!projectId,
   });
   const takeoffSummary = useQuery({
     queryKey: ['analytics', projectId, 'takeoff-summary'],
-    queryFn: async () => (await takeoffApi.getSummary(projectId)).data,
-    enabled: tab === 'material',
+    queryFn: async () => (await takeoffApi.getSummary(projectId!)).data,
+    enabled: tab === 'material' && !!projectId,
   });
   const boqSummary = useQuery({
     queryKey: ['analytics', projectId, 'boq-summary'],
-    queryFn: async () => (await boqApi.getSummary(projectId)).data,
-    enabled: tab === 'labour',
+    queryFn: async () => (await boqApi.getSummary(projectId!)).data,
+    enabled: tab === 'labour' && !!projectId,
   });
   const riskTrends = useQuery({
     queryKey: ['analytics', projectId, 'risk-trends'],
-    queryFn: async () => (await risksApi.getTrends(projectId)).data,
-    enabled: tab === 'risk',
+    queryFn: async () => (await risksApi.getTrends(projectId!)).data,
+    enabled: tab === 'risk' && !!projectId,
   });
   const riskSummary = useQuery({
     queryKey: ['analytics', projectId, 'risk-summary'],
-    queryFn: async () => (await risksApi.getSummary(projectId)).data,
-    enabled: tab === 'risk',
+    queryFn: async () => (await risksApi.getSummary(projectId!)).data,
+    enabled: tab === 'risk' && !!projectId,
   });
 
   const activeQueries =
@@ -165,12 +165,16 @@ export default function AnalyticsPage() {
     return null;
   })();
 
+  const firstError = activeQueries.map((q) => q.error).find(Boolean);
+
+  if (!projectId) return <NoProjectSelected />;
+
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">Analytics</h1>
       <Tabs tabs={TABS} active={tab} onChange={setTab} />
       {loading ? <PageLoader /> : failed ? (
-        <QueryErrorState title="Could not load analytics" onRetry={retryAll} />
+        <QueryErrorState title="Could not load analytics" error={firstError} onRetry={retryAll} />
       ) : !data || (data.lineData.length === 0 && data.barData.length === 0) ? (
         <QueryErrorState title="No analytics data for this view" onRetry={retryAll} />
       ) : (

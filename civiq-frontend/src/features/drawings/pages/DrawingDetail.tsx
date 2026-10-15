@@ -35,7 +35,7 @@ export default function DrawingDetail() {
     onError: () => toast({ title: 'AI analysis failed', variant: 'error' }),
   });
   if (detailQuery.isLoading) return <PageLoader />;
-  if (detailQuery.isError) return <QueryErrorState title="Could not load drawing" onRetry={() => detailQuery.refetch()} />;
+  if (detailQuery.isError) return <QueryErrorState title="Could not load drawing" error={detailQuery.error} onRetry={() => detailQuery.refetch()} />;
   const d = detailQuery.data;
   const analysis = analysisQuery.data;
   const conf = analysis?.confidence ?? 0.94;

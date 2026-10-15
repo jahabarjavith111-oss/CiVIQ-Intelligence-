@@ -2,7 +2,7 @@ import { useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useDrawing } from '@/hooks/useDrawing';
 import { useWorkspaceStore } from '@/store/workspaceStore';
-import { DEMO_PROJECT_ID } from '@/utils/constants';
+import { NoProjectSelected } from '@/components/common/RequireProject';
 import { useUiStore } from '@/store/uiStore';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -13,21 +13,22 @@ import { QueryErrorState } from '@/components/common/QueryErrorState';
 import { EmptyState } from '@/components/common/EmptyState';
 
 export default function DrawingsList() {
-  const projectId = useWorkspaceStore((s) => s.activeProjectId) ?? DEMO_PROJECT_ID;
-  const { listQuery, upload } = useDrawing(projectId);
+  const projectId = useWorkspaceStore((s) => s.activeProjectId);
+  const { listQuery, upload } = useDrawing(projectId ?? undefined);
   const toast = useUiStore((s) => s.pushToast);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const onFile = (file: File | undefined) => {
-    if (!file) return;
+    if (!file || !projectId) return;
     upload.mutate(
       { projectId, data: { projectId, file, type: 'architectural' } },
       { onSuccess: () => toast({ title: 'Drawing uploaded', description: file.name, variant: 'success' }) },
     );
   };
 
+  if (!projectId) return <NoProjectSelected />;
   if (listQuery.isLoading) return <PageLoader />;
-  if (listQuery.isError) return <QueryErrorState title="Could not load drawings" onRetry={() => listQuery.refetch()} />;
+  if (listQuery.isError) return <QueryErrorState title="Could not load drawings" error={listQuery.error} onRetry={() => listQuery.refetch()} />;
   if ((listQuery.data ?? []).length === 0) {
     return (
       <div className="space-y-4">

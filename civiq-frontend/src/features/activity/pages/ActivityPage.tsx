@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { activityApi } from '@/services/activity.api';
 import { useWorkspaceStore } from '@/store/workspaceStore';
-import { DEMO_PROJECT_ID } from '@/utils/constants';
+import { NoProjectSelected } from '@/components/common/RequireProject';
 import { Card, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Select } from '@/components/ui/Select';
@@ -12,12 +12,15 @@ import { QueryErrorState } from '@/components/common/QueryErrorState';
 import { EmptyState } from '@/components/common/EmptyState';
 
 export default function ActivityPage() {
-  const projectId = useWorkspaceStore((s) => s.activeProjectId) ?? DEMO_PROJECT_ID;
+  const projectId = useWorkspaceStore((s) => s.activeProjectId);
   const [filter, setFilter] = useState('');
   const q = useQuery({
     queryKey: ['activity', projectId, filter],
-    queryFn: async () => (await activityApi.list(projectId, { entityType: filter || undefined })).data.data,
+    queryFn: async () => (await activityApi.list(projectId!, { entityType: filter || undefined })).data.data,
+    enabled: !!projectId,
   });
+
+  if (!projectId) return <NoProjectSelected />;
 
   return (
     <div className="space-y-4">
@@ -35,7 +38,7 @@ export default function ActivityPage() {
       <Card>
         <CardTitle>Project timeline</CardTitle>
         {q.isLoading ? <PageLoader /> : q.isError ? (
-          <div className="mt-3"><QueryErrorState title="Could not load activity" onRetry={() => q.refetch()} /></div>
+          <div className="mt-3"><QueryErrorState title="Could not load activity" error={q.error} onRetry={() => q.refetch()} /></div>
         ) : (q.data ?? []).length === 0 ? (
           <div className="mt-3"><EmptyState title="No activity yet" sub="Events appear here as the team works." /></div>
         ) : (

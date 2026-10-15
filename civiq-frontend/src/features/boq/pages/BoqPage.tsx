@@ -6,7 +6,7 @@ import { boqItemSchema, type BoqItemFormInput } from '@/utils/validators';
 import { boqApi } from '@/services/boq.api';
 import type { CreateBOQItemData } from '@/types/boq';
 import { useWorkspaceStore } from '@/store/workspaceStore';
-import { DEMO_PROJECT_ID } from '@/utils/constants';
+import { NoProjectSelected } from '@/components/common/RequireProject';
 import { Card, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -19,7 +19,7 @@ import { EmptyState } from '@/components/common/EmptyState';
 import { Download, Plus, Trash2 } from 'lucide-react';
 
 export default function BoqPage() {
-  const projectId = useWorkspaceStore((s) => s.activeProjectId) ?? DEMO_PROJECT_ID;
+  const projectId = useWorkspaceStore((s) => s.activeProjectId);
   const qc = useQueryClient();
   const toast = useUiStore((s) => s.pushToast);
   const [wp, setWp] = useState('wp-2');
@@ -28,7 +28,7 @@ export default function BoqPage() {
     defaultValues: { code: '', description: '', unit: 'm3', quantity: 0, rate: 0 },
   });
 
-  const wps = useQuery({ queryKey: ['boq-wp', projectId], queryFn: async () => (await boqApi.getWorkPackages(projectId)).data });
+  const wps = useQuery({ queryKey: ['boq-wp', projectId], queryFn: async () => (await boqApi.getWorkPackages(projectId!)).data, enabled: !!projectId });
   const items = useQuery({ queryKey: ['boq-items', wp], queryFn: async () => (await boqApi.getItems(wp)).data.data });
   const total = (items.data ?? []).reduce((a, i) => a + i.amount, 0);
 
@@ -56,6 +56,8 @@ export default function BoqPage() {
     onSuccess: () => { invalidate(); toast({ title: 'Item deleted', variant: 'success' }); },
     onError: () => toast({ title: 'Could not delete item', variant: 'error' }),
   });
+
+  if (!projectId) return <NoProjectSelected />;
 
   return (
     <div className="space-y-4">
@@ -87,7 +89,7 @@ export default function BoqPage() {
             <Button type="submit" loading={create.isPending}><Plus className="h-4 w-4" /> Add</Button>
           </form>
           {items.isLoading ? <PageLoader /> : items.isError ? (
-            <div className="mt-3"><QueryErrorState title="Could not load BOQ items" onRetry={() => items.refetch()} /></div>
+            <div className="mt-3"><QueryErrorState title="Could not load BOQ items" error={items.error} onRetry={() => items.refetch()} /></div>
           ) : (items.data ?? []).length === 0 ? (
             <div className="mt-3"><EmptyState title="No items in this work package" sub="Add the first item above." /></div>
           ) : (

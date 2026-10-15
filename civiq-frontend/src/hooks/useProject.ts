@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { projectsApi } from '@/services/projects.api';
 import { useProjectStore } from '@/store/projectStore';
@@ -13,6 +14,16 @@ export function useProject(projectId?: string) {
     queryKey: ['projects', 'list'],
     queryFn: async () => (await projectsApi.list()).data.data,
   });
+
+  // Heal stale selection: another account may have persisted an
+  // activeProjectId this user cannot access (would 403 everywhere).
+  const projects = listQuery.data;
+  const activeId = workspace.activeProjectId;
+  useEffect(() => {
+    if (projects && activeId && !projects.some((p) => p.id === activeId)) {
+      workspace.setActiveProject(projects[0]?.id ?? null);
+    }
+  }, [projects, activeId, workspace]);
 
   const detailQuery = useQuery({
     queryKey: ['projects', projectId],

@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { coordinationApi } from '@/services/coordination.api';
 import { teamApi } from '@/services/team.api';
 import { useWorkspaceStore } from '@/store/workspaceStore';
-import { DEMO_PROJECT_ID } from '@/utils/constants';
+import { NoProjectSelected } from '@/components/common/RequireProject';
 import { Card, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -15,16 +15,16 @@ import { EmptyState } from '@/components/common/EmptyState';
 import { Download } from 'lucide-react';
 
 export default function CoordinationPage() {
-  const projectId = useWorkspaceStore((s) => s.activeProjectId) ?? DEMO_PROJECT_ID;
+  const projectId = useWorkspaceStore((s) => s.activeProjectId);
   const qc = useQueryClient();
   const navigate = useNavigate();
   const toast = useUiStore((s) => s.pushToast);
-  const list = useQuery({ queryKey: ['conf', projectId], queryFn: async () => (await coordinationApi.getConflicts(projectId)).data.data });
-  const sum = useQuery({ queryKey: ['conf-sum', projectId], queryFn: async () => (await coordinationApi.getSummary(projectId)).data });
-  const team = useQuery({ queryKey: ['team', projectId], queryFn: async () => (await teamApi.list(projectId)).data });
+  const list = useQuery({ queryKey: ['conf', projectId], queryFn: async () => (await coordinationApi.getConflicts(projectId!)).data.data, enabled: !!projectId });
+  const sum = useQuery({ queryKey: ['conf-sum', projectId], queryFn: async () => (await coordinationApi.getSummary(projectId!)).data, enabled: !!projectId });
+  const team = useQuery({ queryKey: ['team', projectId], queryFn: async () => (await teamApi.list(projectId!)).data, enabled: !!projectId });
 
   const run = useMutation({
-    mutationFn: () => coordinationApi.runClashDetection(projectId, { modelId: 'mdl-1', tolerance: 0.05 }).then((r) => r.data),
+    mutationFn: () => coordinationApi.runClashDetection(projectId!, { modelId: 'mdl-1', tolerance: 0.05 }).then((r) => r.data),
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ['conf', projectId] });
       toast({ title: `Clash run ${res.runId}`, description: `${res.statistics.totalClashes} total • ${res.statistics.newClashes} new`, variant: 'success' });
@@ -57,6 +57,8 @@ export default function CoordinationPage() {
     onError: () => toast({ title: 'Could not assign conflict', variant: 'error' }),
   });
 
+  if (!projectId) return <NoProjectSelected />;
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -73,7 +75,7 @@ export default function CoordinationPage() {
           <p className="mt-1 text-sm text-text-muted">{run.data.statistics.totalClashes} clashes • {run.data.statistics.newClashes} new • {run.data.statistics.resolvedClashes} resolved since last run</p></Card>
       )}
       {list.isLoading ? <PageLoader /> : list.isError ? (
-        <QueryErrorState title="Could not load conflicts" onRetry={() => list.refetch()} />
+        <QueryErrorState title="Could not load conflicts" error={list.error} onRetry={() => list.refetch()} />
       ) : (list.data ?? []).length === 0 ? (
         <EmptyState title="No open conflicts" sub="Run clash detection to find coordination issues." />
       ) : (

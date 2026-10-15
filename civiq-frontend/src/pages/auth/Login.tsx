@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Logo } from '@/components/common/Logo';
+import { apiErrorMessage } from '@/utils/errors';
 
 export default function Login() {
   const { login } = useAuth();
@@ -20,7 +21,7 @@ export default function Login() {
         <form onSubmit={handleSubmit((d) => login.mutate(d))} className="space-y-3">
           <Input label="Email" {...register('email')} error={errors.email?.message} />
           <Input label="Password" type="password" {...register('password')} error={errors.password?.message} />
-          {login.isError && <p className="text-xs text-red-600 dark:text-red-400">Sign-in failed — check your email and password, then try again.</p>}
+          {login.isError && <p className="text-xs text-red-600 dark:text-red-400">{apiErrorMessage(login.error, 'Sign-in failed — check your email and password, then try again.')}</p>}
           <Button className="w-full" loading={login.isPending}>Sign in</Button>
           <Link to="/dashboard"><Button variant="outline" className="w-full" type="button">Skip to dashboard (dev)</Button></Link>
         </form>

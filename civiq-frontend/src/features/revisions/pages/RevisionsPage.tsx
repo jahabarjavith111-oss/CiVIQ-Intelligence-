@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { revisionsApi } from '@/services/revisions.api';
 import { useWorkspaceStore } from '@/store/workspaceStore';
-import { DEMO_PROJECT_ID } from '@/utils/constants';
+import { NoProjectSelected } from '@/components/common/RequireProject';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { PageLoader } from '@/components/common/PageLoader';
@@ -9,10 +9,11 @@ import { QueryErrorState } from '@/components/common/QueryErrorState';
 import { EmptyState } from '@/components/common/EmptyState';
 
 export default function RevisionsPage() {
-  const projectId = useWorkspaceStore((s) => s.activeProjectId) ?? DEMO_PROJECT_ID;
-  const q = useQuery({ queryKey: ['rev', projectId], queryFn: async () => (await revisionsApi.list(projectId)).data.data });
+  const projectId = useWorkspaceStore((s) => s.activeProjectId);
+  const q = useQuery({ queryKey: ['rev', projectId], queryFn: async () => (await revisionsApi.list(projectId!)).data.data, enabled: !!projectId });
+  if (!projectId) return <NoProjectSelected />;
   if (q.isLoading) return <PageLoader />;
-  if (q.isError) return <QueryErrorState title="Could not load revisions" onRetry={() => q.refetch()} />;
+  if (q.isError) return <QueryErrorState title="Could not load revisions" error={q.error} onRetry={() => q.refetch()} />;
   if ((q.data ?? []).length === 0) return <div className="space-y-4"><h1 className="text-2xl font-bold">Revisions</h1><EmptyState title="No revisions yet" sub="Drawing revisions and their impacts appear here." /></div>;
   return (
     <div className="space-y-4">

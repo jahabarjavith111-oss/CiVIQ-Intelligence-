@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Logo } from '@/components/common/Logo';
+import { apiErrorMessage } from '@/utils/errors';
 
 export default function Register() {
   const { register: reg } = useAuth();
@@ -23,7 +24,7 @@ export default function Register() {
           <Input label="Email" {...register('email')} error={errors.email?.message} />
           <Input label="Password" type="password" {...register('password')} error={errors.password?.message} />
           <Input label="Company (optional)" {...register('company')} />
-          {reg.isError && <p className="text-xs text-red-600 dark:text-red-400">Registration failed — please try again.</p>}
+          {reg.isError && <p className="text-xs text-red-600 dark:text-red-400">{apiErrorMessage(reg.error, 'Registration failed — please try again.')}</p>}
           <Button className="w-full" loading={reg.isPending}>Create account</Button>
         </form>
         <p className="mt-4 text-center text-sm text-text-muted"><Link to="/login" className="font-semibold text-text-primary">Back to login</Link></p>

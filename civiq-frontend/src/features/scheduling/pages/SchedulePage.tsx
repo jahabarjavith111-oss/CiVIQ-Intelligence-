@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { scheduleApi } from '@/services/schedule.api';
 import { useWorkspaceStore } from '@/store/workspaceStore';
-import { DEMO_PROJECT_ID } from '@/utils/constants';
+import { NoProjectSelected } from '@/components/common/RequireProject';
 import { Card, CardTitle } from '@/components/ui/Card';
 import { Table } from '@/components/ui/Table';
 import { Badge } from '@/components/ui/Badge';
@@ -11,13 +11,14 @@ import { QueryErrorState } from '@/components/common/QueryErrorState';
 import { EmptyState } from '@/components/common/EmptyState';
 
 export default function SchedulePage() {
-  const projectId = useWorkspaceStore((s) => s.activeProjectId) ?? DEMO_PROJECT_ID;
-  const acts = useQuery({ queryKey: ['sched', projectId], queryFn: async () => (await scheduleApi.getActivities(projectId)).data.data });
-  const sum = useQuery({ queryKey: ['sched-sum', projectId], queryFn: async () => (await scheduleApi.getSummary(projectId)).data });
+  const projectId = useWorkspaceStore((s) => s.activeProjectId);
+  const acts = useQuery({ queryKey: ['sched', projectId], queryFn: async () => (await scheduleApi.getActivities(projectId!)).data.data, enabled: !!projectId });
+  const sum = useQuery({ queryKey: ['sched-sum', projectId], queryFn: async () => (await scheduleApi.getSummary(projectId!)).data, enabled: !!projectId });
 
+  if (!projectId) return <NoProjectSelected />;
   if (acts.isLoading || sum.isLoading) return <PageLoader />;
   if (acts.isError || sum.isError) {
-    return <QueryErrorState title="Could not load schedule" onRetry={() => { acts.refetch(); sum.refetch(); }} />;
+    return <QueryErrorState title="Could not load schedule" error={acts.error ?? sum.error} onRetry={() => { acts.refetch(); sum.refetch(); }} />;
   }
 
   return (

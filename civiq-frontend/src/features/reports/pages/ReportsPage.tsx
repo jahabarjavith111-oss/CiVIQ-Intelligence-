@@ -11,7 +11,7 @@ import { coordinationApi } from '@/services/coordination.api';
 import { revisionsApi } from '@/services/revisions.api';
 import { risksApi } from '@/services/risks.api';
 import { useWorkspaceStore } from '@/store/workspaceStore';
-import { DEMO_PROJECT_ID } from '@/utils/constants';
+import { NoProjectSelected } from '@/components/common/RequireProject';
 import { Card, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
@@ -118,16 +118,16 @@ async function buildSections(type: ReportType, projectId: string): Promise<{ hea
 }
 
 export default function ReportsPage() {
-  const projectId = useWorkspaceStore((s) => s.activeProjectId) ?? DEMO_PROJECT_ID;
+  const projectId = useWorkspaceStore((s) => s.activeProjectId);
   const qc = useQueryClient();
   const toast = useUiStore((s) => s.pushToast);
   const [type, setType] = useState<ReportType>('complete');
-  const list = useQuery({ queryKey: ['reports', projectId], queryFn: async () => (await reportsApi.list(projectId)).data });
+  const list = useQuery({ queryKey: ['reports', projectId], queryFn: async () => (await reportsApi.list(projectId!)).data, enabled: !!projectId });
 
   const generate = useMutation({
     mutationFn: async () => {
-      const rep = (await reportsApi.generate(projectId, { name: `${type}-${Date.now()}`, type })).data;
-      const sections = await buildSections(type, projectId);
+      const rep = (await reportsApi.generate(projectId!, { name: `${type}-${Date.now()}`, type })).data;
+      const sections = await buildSections(type, projectId!);
       return { rep, sections };
     },
     onSuccess: ({ rep, sections }) => {
@@ -137,6 +137,8 @@ export default function ReportsPage() {
     },
     onError: () => toast({ title: 'Report generation failed', variant: 'error' }),
   });
+
+  if (!projectId) return <NoProjectSelected />;
 
   return (
     <div className="space-y-4">
@@ -151,7 +153,7 @@ export default function ReportsPage() {
       <Card>
         <CardTitle>Generated</CardTitle>
         {list.isLoading ? <PageLoader /> : list.isError ? (
-          <div className="mt-2"><QueryErrorState title="Could not load reports" onRetry={() => list.refetch()} /></div>
+          <div className="mt-2"><QueryErrorState title="Could not load reports" error={list.error} onRetry={() => list.refetch()} /></div>
         ) : (
           <div className="mt-2 space-y-2">
             {(list.data ?? []).map((r) => (

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { documentsApi, type DocumentItem } from '@/services/reports.api';
 import { useWorkspaceStore } from '@/store/workspaceStore';
-import { DEMO_PROJECT_ID } from '@/utils/constants';
+import { NoProjectSelected } from '@/components/common/RequireProject';
 import { useUiStore } from '@/store/uiStore';
 import { Card, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -21,18 +21,19 @@ const FOLDER_ROUTES: Record<string, string> = {
 };
 
 export default function DocumentsPage() {
-  const projectId = useWorkspaceStore((s) => s.activeProjectId) ?? DEMO_PROJECT_ID;
+  const projectId = useWorkspaceStore((s) => s.activeProjectId);
   const qc = useQueryClient();
   const toast = useUiStore((s) => s.pushToast);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const q = useQuery({
     queryKey: ['documents', projectId],
-    queryFn: async () => (await documentsApi.list(projectId)).data,
+    queryFn: async () => (await documentsApi.list(projectId!)).data,
+    enabled: !!projectId,
   });
 
   const upload = useMutation({
-    mutationFn: (file: File) => documentsApi.upload(projectId, file).then((r) => r.data),
+    mutationFn: (file: File) => documentsApi.upload(projectId!, file).then((r) => r.data),
     onSuccess: (doc) => {
       qc.invalidateQueries({ queryKey: ['documents', projectId] });
       toast({ title: 'Document uploaded', description: doc.name, variant: 'success' });
@@ -53,6 +54,8 @@ export default function DocumentsPage() {
     return acc;
   }, {});
 
+  if (!projectId) return <NoProjectSelected />;
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -64,7 +67,7 @@ export default function DocumentsPage() {
         </div>
       </div>
       {q.isLoading ? <PageLoader /> : q.isError ? (
-        <QueryErrorState title="Could not load documents" onRetry={() => q.refetch()} />
+        <QueryErrorState title="Could not load documents" error={q.error} onRetry={() => q.refetch()} />
       ) : docs.length === 0 ? (
         <EmptyState title="No documents yet" sub="Upload project files to organize them here." />
       ) : (

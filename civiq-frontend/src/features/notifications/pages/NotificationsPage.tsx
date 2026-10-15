@@ -44,7 +44,7 @@ export default function NotificationsPage() {
       </div>
       <Tabs tabs={[{ key: 'all', label: 'All' }, { key: 'unread', label: 'Unread' }]} active={tab} onChange={setTab} />
       {q.isLoading ? <PageLoader /> : q.isError ? (
-        <QueryErrorState title="Could not load notifications" onRetry={() => q.refetch()} />
+        <QueryErrorState title="Could not load notifications" error={q.error} onRetry={() => q.refetch()} />
       ) : items.length === 0 ? (
         <EmptyState title="All caught up" sub="New clashes, risks, mentions and assignments land here." />
       ) : (

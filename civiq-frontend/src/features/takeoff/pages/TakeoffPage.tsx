@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { takeoffItemSchema, type TakeoffItemFormInput } from '@/utils/validators';
 import { takeoffApi } from '@/services/takeoff.api';
 import { useWorkspaceStore } from '@/store/workspaceStore';
-import { DEMO_PROJECT_ID } from '@/utils/constants';
+import { NoProjectSelected } from '@/components/common/RequireProject';
 import { Card, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -20,7 +20,7 @@ import { EmptyState } from '@/components/common/EmptyState';
 import { Download, Plus, Trash2 } from 'lucide-react';
 
 export default function TakeoffPage() {
-  const projectId = useWorkspaceStore((s) => s.activeProjectId) ?? DEMO_PROJECT_ID;
+  const projectId = useWorkspaceStore((s) => s.activeProjectId);
   const qc = useQueryClient();
   const toast = useUiStore((s) => s.pushToast);
   const [trade, setTrade] = useState<TradeCategory | 'all'>('all');
@@ -29,7 +29,7 @@ export default function TakeoffPage() {
     defaultValues: { code: '', description: '', unit: 'm3', quantity: 0 },
   });
 
-  const q = useQuery({ queryKey: ['takeoff', projectId], queryFn: async () => (await takeoffApi.list(projectId)).data.data });
+  const q = useQuery({ queryKey: ['takeoff', projectId], queryFn: async () => (await takeoffApi.list(projectId!)).data.data, enabled: !!projectId });
   const items = (q.data ?? []).filter((i) => trade === 'all' || i.trade === trade);
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ['takeoff', projectId] });
@@ -41,7 +41,7 @@ export default function TakeoffPage() {
   });
 
   const create = useMutation({
-    mutationFn: (data: { code: string; description: string; unit: string; quantity: number }) => takeoffApi.create(projectId, {
+    mutationFn: (data: { code: string; description: string; unit: string; quantity: number }) => takeoffApi.create(projectId!, {
       trade: trade === 'all' ? 'concrete' : trade, category: 'General',
       code: data.code, description: data.description, unit: data.unit,
       quantity: data.quantity, status: 'draft', drawingReferences: [], modelReferences: [],
@@ -60,6 +60,8 @@ export default function TakeoffPage() {
     onSuccess: () => { invalidate(); toast({ title: 'Item deleted', variant: 'success' }); },
     onError: () => toast({ title: 'Could not delete item', variant: 'error' }),
   });
+
+  if (!projectId) return <NoProjectSelected />;
 
   return (
     <div className="space-y-4">
@@ -87,7 +89,7 @@ export default function TakeoffPage() {
       <Card>
         <CardTitle>{items.length} items • edit quantity inline</CardTitle>
         {q.isLoading ? <PageLoader /> : q.isError ? (
-          <div className="mt-3"><QueryErrorState title="Could not load takeoff items" onRetry={() => q.refetch()} /></div>
+          <div className="mt-3"><QueryErrorState title="Could not load takeoff items" error={q.error} onRetry={() => q.refetch()} /></div>
         ) : items.length === 0 ? <div className="mt-3"><EmptyState title="No items in this trade" sub="Add the first one above." /></div> : (
           <div className="mt-3 overflow-x-auto">
             <table className="w-full text-sm">

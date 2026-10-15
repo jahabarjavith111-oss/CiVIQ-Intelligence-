@@ -3,7 +3,7 @@ import { useProject } from '@/hooks/useProject';
 import { useDashboard } from '../hooks/useDashboard';
 import { activityApi } from '@/services/activity.api';
 import { useWorkspaceStore } from '@/store/workspaceStore';
-import { DEMO_PROJECT_ID } from '@/utils/constants';
+import { NoProjectSelected } from '@/components/common/RequireProject';
 import { StatCard } from '@/components/common/StatCard';
 import { Card, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -30,17 +30,19 @@ const FALLBACK_ACTIVITY = [
 ];
 
 export default function Dashboard() {
-  const activeId = useWorkspaceStore((s) => s.activeProjectId) ?? DEMO_PROJECT_ID;
-  const { listQuery, healthQuery } = useProject(activeId);
-  const { budget, schedule, risks, conflicts } = useDashboard(activeId);
+  const activeId = useWorkspaceStore((s) => s.activeProjectId);
+  const { listQuery, healthQuery } = useProject(activeId ?? undefined);
+  const { budget, schedule, risks, conflicts } = useDashboard(activeId ?? undefined);
   const activity = useQuery({
     queryKey: ['activity', activeId, 'recent'],
-    queryFn: async () => (await activityApi.list(activeId, { limit: 4 })).data.data,
+    queryFn: async () => (await activityApi.list(activeId!, { limit: 4 })).data.data,
+    enabled: !!activeId,
   });
   const colors = useChartColors();
 
   if (listQuery.isLoading) return <PageLoader />;
-  if (listQuery.isError) return <QueryErrorState title="Could not load dashboard" onRetry={() => listQuery.refetch()} />;
+  if (listQuery.isError) return <QueryErrorState title="Could not load dashboard" error={listQuery.error} onRetry={() => listQuery.refetch()} />;
+  if (!activeId) return <NoProjectSelected />;
 
   const projects = listQuery.data ?? [];
   const summary = projects[0];

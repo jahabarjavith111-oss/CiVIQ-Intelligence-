@@ -1,7 +1,7 @@
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { risksApi } from '@/services/risks.api';
 import { useWorkspaceStore } from '@/store/workspaceStore';
-import { DEMO_PROJECT_ID } from '@/utils/constants';
+import { NoProjectSelected } from '@/components/common/RequireProject';
 import { Card, CardTitle } from '@/components/ui/Card';
 import { Table } from '@/components/ui/Table';
 import { Badge } from '@/components/ui/Badge';
@@ -15,14 +15,16 @@ import { EmptyState } from '@/components/common/EmptyState';
 import { Download } from 'lucide-react';
 
 export default function RisksPage() {
-  const projectId = useWorkspaceStore((s) => s.activeProjectId) ?? DEMO_PROJECT_ID;
+  const projectId = useWorkspaceStore((s) => s.activeProjectId);
   const toast = useUiStore((s) => s.pushToast);
-  const list = useQuery({ queryKey: ['risks', projectId], queryFn: async () => (await risksApi.list(projectId)).data.data });
+  const list = useQuery({ queryKey: ['risks', projectId], queryFn: async () => (await risksApi.list(projectId!)).data.data, enabled: !!projectId });
 
   const mc = useMutation({
-    mutationFn: () => risksApi.runMonteCarlo(projectId, { runs: 10000 }).then((r) => r.data),
+    mutationFn: () => risksApi.runMonteCarlo(projectId!, { runs: 10000 }).then((r) => r.data),
     onSuccess: () => toast({ title: 'Monte Carlo complete (10,000 runs)', variant: 'success' }),
   });
+
+  if (!projectId) return <NoProjectSelected />;
 
   return (
     <div className="space-y-4">
@@ -57,7 +59,7 @@ export default function RisksPage() {
       <Card>
         <CardTitle>Risk register</CardTitle>
         {list.isLoading ? <PageLoader /> : list.isError ? (
-          <div className="mt-3"><QueryErrorState title="Could not load risks" onRetry={() => list.refetch()} /></div>
+          <div className="mt-3"><QueryErrorState title="Could not load risks" error={list.error} onRetry={() => list.refetch()} /></div>
         ) : (list.data ?? []).length === 0 ? (
           <div className="mt-3"><EmptyState title="No risks registered" sub="Identify the first project risk to get started." /></div>
         ) : (

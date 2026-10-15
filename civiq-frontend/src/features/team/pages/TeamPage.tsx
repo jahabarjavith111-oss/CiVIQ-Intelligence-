@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { inviteSchema, type InviteForm } from '@/utils/validators';
 import { teamApi } from '@/services/team.api';
 import { useWorkspaceStore } from '@/store/workspaceStore';
-import { DEMO_PROJECT_ID } from '@/utils/constants';
+import { NoProjectSelected } from '@/components/common/RequireProject';
 import { Card, CardTitle } from '@/components/ui/Card';
 import { Table } from '@/components/ui/Table';
 import { Button } from '@/components/ui/Button';
@@ -20,7 +20,7 @@ import { EmptyState } from '@/components/common/EmptyState';
 import { Plus, Trash2 } from 'lucide-react';
 
 export default function TeamPage() {
-  const projectId = useWorkspaceStore((s) => s.activeProjectId) ?? DEMO_PROJECT_ID;
+  const projectId = useWorkspaceStore((s) => s.activeProjectId);
   const qc = useQueryClient();
   const toast = useUiStore((s) => s.pushToast);
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -29,19 +29,21 @@ export default function TeamPage() {
     defaultValues: { email: '', role: 'engineer' },
   });
 
-  const q = useQuery({ queryKey: ['team', projectId], queryFn: async () => (await teamApi.list(projectId)).data });
+  const q = useQuery({ queryKey: ['team', projectId], queryFn: async () => (await teamApi.list(projectId!)).data, enabled: !!projectId });
 
   const invite = useMutation({
-    mutationFn: (data: InviteForm) => teamApi.invite(projectId, data).then((r) => r.data),
+    mutationFn: (data: InviteForm) => teamApi.invite(projectId!, data).then((r) => r.data),
     onSuccess: (res) => { toast({ title: `Invited ${res.email}`, variant: 'success' }); setInviteOpen(false); resetInvite(); qc.invalidateQueries({ queryKey: ['team', projectId] }); },
     onError: () => toast({ title: 'Invite failed', variant: 'error' }),
   });
 
   const remove = useMutation({
-    mutationFn: (userId: string) => teamApi.remove(projectId, userId),
+    mutationFn: (userId: string) => teamApi.remove(projectId!, userId),
     onSuccess: () => { toast({ title: 'Member removed', variant: 'success' }); qc.invalidateQueries({ queryKey: ['team', projectId] }); },
     onError: () => toast({ title: 'Could not remove member', variant: 'error' }),
   });
+
+  if (!projectId) return <NoProjectSelected />;
 
   return (
     <div className="space-y-4">
@@ -52,7 +54,7 @@ export default function TeamPage() {
       <Card>
         <CardTitle>{q.data?.length ?? 0} members</CardTitle>
         {q.isLoading ? <PageLoader /> : q.isError ? (
-          <div className="mt-3"><QueryErrorState title="Could not load team" onRetry={() => q.refetch()} /></div>
+          <div className="mt-3"><QueryErrorState title="Could not load team" error={q.error} onRetry={() => q.refetch()} /></div>
         ) : (q.data ?? []).length === 0 ? (
           <div className="mt-3"><EmptyState title="No team members yet" sub="Invite the first member to this project." /></div>
         ) : (

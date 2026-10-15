@@ -2,14 +2,14 @@ import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { simulationApi } from '@/services/simulation.api';
 import { useWorkspaceStore } from '@/store/workspaceStore';
-import { DEMO_PROJECT_ID } from '@/utils/constants';
+import { NoProjectSelected } from '@/components/common/RequireProject';
 import { Card, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { useUiStore } from '@/store/uiStore';
 import { Input } from '@/components/ui/Input';
 
 export default function SimulationPage() {
-  const projectId = useWorkspaceStore((s) => s.activeProjectId) ?? DEMO_PROJECT_ID;
+  const projectId = useWorkspaceStore((s) => s.activeProjectId);
   const toast = useUiStore((s) => s.pushToast);
   const [name, setName] = useState('Steel surge + monsoon delay');
   const [steel, setSteel] = useState(10);
@@ -19,13 +19,15 @@ export default function SimulationPage() {
 
   const run = useMutation({
     mutationFn: async () => {
-      const created = (await simulationApi.create(projectId, { name, description: 'what-if', inputs: { steelPercent: steel, labourPercent: labour, durationDays: days, concretePercent: concrete } })).data;
+      const created = (await simulationApi.create(projectId!, { name, description: 'what-if', inputs: { steelPercent: steel, labourPercent: labour, durationDays: days, concretePercent: concrete } })).data;
       return (await simulationApi.run(created.id)).data;
     },
     onSuccess: () => toast({ title: 'Scenario complete', variant: 'success' }),
     onError: () => toast({ title: 'Scenario failed', variant: 'error' }),
   });
   const ran = !!run.data?.results;
+
+  if (!projectId) return <NoProjectSelected />;
 
   return (
     <div className="space-y-4">
