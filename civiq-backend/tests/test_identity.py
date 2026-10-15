@@ -1,6 +1,25 @@
 """Auth + projects + team + activity + notifications contract tests."""
 
 
+def test_cors_preflight_allows_local_dev_ports(client):
+    # Any localhost dev server (3000, 5173, …) must pass preflight, else the
+    # browser blocks auth calls with an opaque network error.
+    for origin in ("http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:3000"):
+        r = client.options("/api/auth/register", headers={
+            "Origin": origin,
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "content-type,authorization",
+        })
+        assert r.status_code == 200, (origin, r.status_code, r.text)
+
+
+def test_register_duplicate_reports_conflict(client, auth):
+    r = client.post("/api/auth/register", json={
+        "email": "tester@civiq.ai", "password": "test1234", "name": "Tester"})
+    assert r.status_code == 409
+    assert "already registered" in r.json()["detail"]
+
+
 def test_login_and_me(client, auth, project):
     r = client.post("/api/auth/login", json={"email": "tester@civiq.ai", "password": "test1234"})
     assert r.status_code == 200
